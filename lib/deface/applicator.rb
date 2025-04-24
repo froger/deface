@@ -49,7 +49,7 @@ module Deface
           end
         end
 
-        source = doc.to_s
+        source = CGI.unescapeHTML doc.to_s
 
         Deface::Parser.undo_erb_markup!(source)
 
