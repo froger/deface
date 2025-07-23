@@ -6,6 +6,12 @@ module Deface
       )
     end
 
+    def self.js_lookup_context
+      @js_lookup_context ||= ActionView::LookupContext.new(
+        ActionController::Base.view_paths, {:formats => [:js]}
+      )
+    end
+
     # used to find source for a partial or template using virtual_path
     def load_template_source(virtual_path, partial, apply_overrides=true, lookup_context: Deface::TemplateHelper.lookup_context)
       parts = virtual_path.split("/")
@@ -19,6 +25,8 @@ module Deface
       end
 
       view = lookup_context.disable_cache { lookup_context.find(name, prefix, partial) }
+      js = Deface::TemplateHelper.js_lookup_context.disable_cache { Deface::TemplateHelper.js_lookup_context.find_all(name, prefix, partial) }
+      raise "#{name}: Can not override, a .js.erb alternative is present" if js.any?
 
       source =
         if view.handler.to_s == "Haml::Plugin"
