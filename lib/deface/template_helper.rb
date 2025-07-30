@@ -6,6 +6,12 @@ module Deface
       )
     end
 
+    def self.js_lookup_context
+      @js_lookup_context ||= ActionView::LookupContext.new(
+        ActionController::Base.view_paths, {:formats => [:js]}
+      )
+    end
+
     # used to find source for a partial or template using virtual_path
     def load_template_source(virtual_path, partial, apply_overrides=true, lookup_context: Deface::TemplateHelper.lookup_context)
       parts = virtual_path.split("/")
@@ -19,6 +25,18 @@ module Deface
       end
 
       view = lookup_context.disable_cache { lookup_context.find(name, prefix, partial) }
+      js = Deface::TemplateHelper.js_lookup_context.disable_cache { Deface::TemplateHelper.js_lookup_context.find_all(name, prefix, partial) }
+      if js.any?
+        base_path = Rails.root.join("app/compiled_views")
+        js.each do |js_view|
+          # Copy the .js.erb file into the compiled_views directory, without changes
+          # This enable rails render format: to switch correctly to the right alternative.
+          template_path = base_path.join("#{js_view.virtual_path}.js.erb")
+          FileUtils.mkdir_p(template_path.dirname)
+          Rails.logger.info "Copying .js.erb to compiled_views: #{template_path.to_s}"
+          File.write(template_path, js_view.source)
+        end
+      end
 
       source =
         if view.handler.to_s == "Haml::Plugin"
